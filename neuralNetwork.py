@@ -47,15 +47,130 @@ YTestO = oneHot(YTest)
 ### forward pass
 
 inputSize = 784
-hiddenSize = 128
+hiddenSize = 128 #### <---------
 outputSize = 10
 
-##input
-W1 = np.random.randn(inputSize , hiddenSize) * 0.01
-B1 = np.zeros((1,hiddenSize))
+## Input to output
 
-##output
-W2 = np.random.randn(inputSize, hiddenSize) * 0.01
-B2 = np.random.randn((1,outputSize)) 
+W1 = np.random.randn(inputSize, hiddenSize) * np.sqrt(2.0 / inputSize)
+W2 = np.random.randn(hiddenSize, outputSize) * np.sqrt(2.0 / hiddenSize) 
+
+# W1 = np.random.randn(inputSize , hiddenSize) * 0.01
+b1 = np.zeros((1,hiddenSize))
+# print("weights", W1)
+# print("outputs", B1)
+
+## hidden to output layer
+# W2 = np.random.randn(hiddenSize, outputSize) * 0.01
+b2 = np.zeros((1,outputSize)) 
+
+def reLU(num):
+    return np.maximum(0,num)
+
+def softMax(num):
+    num = num - np.max(num, axis = 1, keepdims = True)
+    exp_z = np.exp(num)
+    return exp_z /np.sum(exp_z, axis = 1, keepdims = True)
+
+def forwardPass(inputLayer):
+    z1 = inputLayer @ W1 + b1
+    a1 = reLU(z1)
+
+    z2 = a1 @ W2 + b2
+    a2 = softMax(z2)
+
+    return z1, a1, z2, a2
+
+### testing shapes
+
+# x_Batch = XTrain[:32]
+
+# Z1, A1, Z2, A2 = forwardPass(x_Batch)
+
+# print('x_Batch shape test:',x_Batch.shape)
+# print('A2 shape test:',A2.shape)
+# print('A2 row 0 values test :', np.sum(A2[0]))
+
+### cross entropy loss logic 
+ 
+def crossEntropy(y_hat, y):
+    return -np.mean(np.sum( y * np.log(y_hat + 1e-9), axis = 1))
+
+### back propagation logic
+## reLU 
+
+def reLUDerrivative(z):
+    return (z > 0).astype(float)
+
+def backProp(X, y, z1, a1, z2, y_hat):
+    m = X.shape[0]
+
+    dZ2 = y_hat - y
+    dW2 = (a1.T @ dZ2) / m
+
+    db2 = np.sum(dZ2, axis = 0, keepdims = True) / m
+    
+    dA1 = dZ2 @ W2.T
+    dZ1 = dA1 * reLUDerrivative(z1)
+
+    dW1 = (X.T @ dZ1)/ m
+
+    db1 = np.sum(dZ1, axis = 0, keepdims = True) / m
+
+    return dW1, db1, dW2, db2
+
+
+def updateParams(W1, b1, W2, b2, lr, dW1, db1, dW2, db2):
+    # print("entering update params")
+    
+
+    W1 -= lr * dW1
+    b1 -= lr * db1
+    W2 -= lr * dW2
+    b2 -= lr * db2
+    # print("exiting update params")
+
+    return W1, b1, W2, b2
+
+
+
+def accuracy(y_hat, y):
+    predics = np.argmax(y_hat, axis = 1)
+    labels = np.argmax(y, axis = 1)
+
+    return np.mean(predics == labels)
+
+def trainingStep(X, y,W1, b1, W2, b2, lr = 0.1):
+    # print("entering training step")
+
+    z1, a1, z2, y_hat = forwardPass(X)
+    loss = crossEntropy(y_hat, y)
+    acc = accuracy(y_hat, y)
+    
+    dW1, db1, dW2, db2 = backProp(X, y, z1, a1, z2, y_hat)
+    W1, b1, W2, b2 = updateParams(W1, b1, W2, b2, lr, dW1, db1, dW2, db2)
+    # print("exiting training step")
+
+    return W1, b1, W2, b2, loss, acc
+
+
+### testing
+XBatch = XTrain[:32]
+YBatch = YTrainO[:32]
+
+# W1, B1, W2, B2, loss = trainingStep(XBatch, YBatch, W1, B1, W2, B2, lr = 0.1)
+# print(loss)
+
+
+#### training loop
+epochs = 50
+
+W1_copy = W1.copy()
+for epoch in range(epochs):
+    W1, b1, W2, b2, loss = trainingStep(XBatch, YBatch, W1, b1, W2, b2, lr = 0.1)
+    print(f"epoch: {epoch}: loss = {loss}")
+
+    print("Weight change:", np.sum(np.abs(W1 - W1_copy)))
+
 
 
