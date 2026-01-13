@@ -1,6 +1,7 @@
 import numpy as np
 import struct 
 
+
 ###  we start by importing and normalising the data 
 ### images
 def loadImages(fileName):
@@ -47,7 +48,7 @@ YTestO = oneHot(YTest)
 ### forward pass
 
 inputSize = 784
-hiddenSize = 128 #### <---------
+hiddenSize = 256 #### <---------
 outputSize = 10
 
 ## Input to output
@@ -155,22 +156,50 @@ def trainingStep(X, y,W1, b1, W2, b2, lr = 0.1):
 
 
 ### testing
-XBatch = XTrain[:32]
-YBatch = YTrainO[:32]
+batchSize = 32
+XBatch = XTrain[:batchSize]
+YBatch = YTrainO[:batchSize]
 
 # W1, B1, W2, B2, loss = trainingStep(XBatch, YBatch, W1, B1, W2, B2, lr = 0.1)
 # print(loss)
 
+def predict(X):
+    _, _, _, yHat = forwardPass(X)
+    return np.argmax(yHat, axis = 1)
 
-#### training loop
-epochs = 50
+#### <----------------------------------- training loop
+epochs = 100
 
 W1_copy = W1.copy()
+
+sampleIdx = 0 
+sampleImage = XTest[sampleIdx : sampleIdx + 1]
+sampleLabel = np.argmax(YTestO[sampleIdx])
+
+### create a sample
 for epoch in range(epochs):
-    W1, b1, W2, b2, loss = trainingStep(XBatch, YBatch, W1, b1, W2, b2, lr = 0.1)
-    print(f"epoch: {epoch}: loss = {loss}")
+    
+    idx = np.random.choice(len(XTrain), batchSize, replace = False)
+    XBatch = np.array(XTrain)[idx]
+    YBatch = np.array(YTrainO)[idx]
 
-    print("Weight change:", np.sum(np.abs(W1 - W1_copy)))
+    W1, b1, W2, b2, loss, acc = trainingStep(XBatch, YBatch, W1, b1, W2, b2, lr = 0.1)
 
+    _, _, _, yHatTrain = forwardPass(XTrain)
+    _, _, _, yHatTest = forwardPass(XTest)
+    trainAcc = accuracy(yHatTrain, YTrainO)
+    testAcc = accuracy(yHatTest, YTestO)
+
+    _, _, _, y_hat_sample = forwardPass(sampleImage)
+    pred = np.argmax(y_hat_sample)
+    confidence = np.max(y_hat_sample)
+
+    print(f"epoch = {epoch}  |loss = {loss}  |Test accuracy  = {testAcc:.5f}  | Train Accuracy = {trainAcc:.5f}  |Prediction: = {pred} |Actual: {sampleLabel}  |Confidence: {confidence}")
+
+
+    #### printing each prediction
+    
+    
+    # print("Weight change:", np.sum(np.abs(W1 - W1_copy)))
 
 
